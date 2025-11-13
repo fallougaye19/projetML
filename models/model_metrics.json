@@ -1,0 +1,20 @@
+{
+  "model_name": "Random Forest",
+  "training_date": "2025-10-31 20:07:49",
+  "performance_metrics": {
+    "accuracy": 0.9324894514767933,
+    "precision": 0.8808933002481389,
+    "recall": 1.0,
+    "f1_score": 0.9366754617414248,
+    "specificity": 0.8651685393258427
+  },
+  "dataset_info": {
+    "training_samples": 1659,
+    "test_samples": 711,
+    "features": 13,
+    "classes_distribution": {
+      "class_0": 829,
+      "class_1": 830
+    }
+  }
+}
