@@ -122,6 +122,8 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
-if __name__ == '__main__':
-   port = int(os.environ.get("PORT", 5001))
-    app.run(host='0.0.0.0', port=port, debug=False)
+
+# ==============================
+# ❌ Pas de app.run() pour Render !
+# Render utilisera : gunicorn app:app
+# ==============================
