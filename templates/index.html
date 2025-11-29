@@ -1,195 +1,492 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détection de Fraude Bancaire</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analyse de Transaction - Détection de Fraude</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
+    <style>
+      /* Améliorations responsive */
+      @media (max-width: 768px) {
+        .grid-cols-1.md\:grid-cols-3 > * {
+          grid-column: span 3 / span 3;
+        }
 
-<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen p-4 md:p-8">
+        .text-3xl {
+          font-size: 1.5rem;
+        }
 
-<!-- En-tête avec animation -->
-<div class="max-w-6xl mx-auto">
-    <div class="text-center mb-8 animate-fade-in">
-        <div class="inline-block p-4 bg-red-500/10 rounded-full mb-4">
-            <svg class="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-            </svg>
+        .p-6 {
+          padding: 1rem;
+        }
+      }
+
+      /* Amélioration des transitions */
+      .transition-all {
+        transition: all 0.3s ease;
+      }
+
+      /* Correction de l'affichage des graphiques sur mobile */
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen"
+  >
+    <!-- Navigation -->
+    <nav class="bg-gray-800/50 backdrop-blur-lg border-b border-gray-700 mb-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center space-x-4">
+            <div class="p-2 bg-red-500/10 rounded-lg">
+              <svg
+                class="w-8 h-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                ></path>
+              </svg>
+            </div>
+            <span
+              class="text-xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent"
+            >
+              Fraud Detection
+            </span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <a
+              href="{{ url_for('dashboard') }}"
+              class="px-4 py-2 rounded-lg hover:bg-gray-700/50 transition"
+            >
+              Dashboard
+            </a>
+            <a
+              href="{{ url_for('predict_page') }}"
+              class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-semibold"
+            >
+              Analyse
+            </a>
+            <a
+              href="{{ url_for('history') }}"
+              class="px-4 py-2 rounded-lg hover:bg-gray-700/50 transition"
+            >
+              Historique
+            </a>
+            <div
+              class="border-l border-gray-700 pl-4 flex items-center space-x-3"
+            >
+              <div class="text-right">
+                <p class="text-sm font-semibold">{{ current_user.username }}</p>
+                <p class="text-xs text-gray-400">{{ current_user.role }}</p>
+              </div>
+              <a
+                href="{{ url_for('logout') }}"
+                class="p-2 hover:bg-gray-700/50 rounded-lg transition"
+                title="Déconnexion"
+              >
+                <svg
+                  class="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  ></path>
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
-        <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent mb-2">
-            Détection de Fraude Bancaire
+      </div>
+    </nav>
+
+    <!-- En-tête avec animation -->
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="text-center mb-8 animate-fade-in">
+        <div class="inline-block p-4 bg-red-500/10 rounded-full mb-4">
+          <svg
+            class="w-16 h-16 text-red-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            ></path>
+          </svg>
+        </div>
+        <h1
+          class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent mb-2"
+        >
+          Analyse de Transaction
         </h1>
-        <p class="text-gray-400 text-lg">Analyse intelligente des transactions en temps réel</p>
-    </div>
+        <p class="text-gray-400 text-lg">
+          Détection intelligente en temps réel
+        </p>
+      </div>
 
-    <!-- Formulaire principal -->
-    <form id="fraudForm" class="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-gray-700">
-
+      <!-- Formulaire principal -->
+      <form
+        id="fraudForm"
+        class="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 md:p-8 shadow-2xl border border-gray-700"
+      >
         <!-- Section Informations Personnelles -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                Informations Personnelles
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Genre</label>
-                    <select id="Gender" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition">
-                        <option value="M">👨 Masculin</option>
-                        <option value="F">👩 Féminin</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Âge</label>
-                    <input type="number" id="Age" placeholder="Ex: 35" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Type de Maison (ID)</label>
-                    <input type="number" id="HouseTypeID" placeholder="1-5" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Disponibilité Contact (ID)</label>
-                    <input type="number" id="ContactAvaliabilityID" placeholder="1-3" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Pays d'origine</label>
-                    <input type="text" id="HomeCountry" placeholder="Ex: Senegal" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
+          <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              ></path>
+            </svg>
+            Informations Personnelles
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Genre</label
+              >
+              <select
+                id="Gender"
+                name="Gender"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+              >
+                <option value="M">👨 Masculin</option>
+                <option value="F">👩 Féminin</option>
+              </select>
             </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Âge</label
+              >
+              <input
+                type="number"
+                id="Age"
+                name="Age"
+                placeholder="Ex: 35"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Type de Maison (ID)</label
+              >
+              <input
+                type="number"
+                id="HouseTypeID"
+                name="HouseTypeID"
+                placeholder="1-5"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Disponibilité Contact (ID)</label
+              >
+              <input
+                type="number"
+                id="ContactAvaliabilityID"
+                name="ContactAvaliabilityID"
+                placeholder="1-3"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+
+            <div class="form-group md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Pays d'origine</label
+              >
+              <input
+                type="text"
+                id="HomeCountry"
+                name="HomeCountry"
+                placeholder="Ex: Senegal"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Section Transaction -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-                Détails de la Transaction
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Pays de transaction</label>
-                    <input type="text" id="TransactionCountry" placeholder="Ex: France" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Montant (€)</label>
-                    <input type="number" id="TransactionAmount" step="0.01" placeholder="0.00" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Achat important</label>
-                    <select id="LargePurchase" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition">
-                        <option value="0">❌ Non</option>
-                        <option value="1">✅ Oui</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Code monnaie</label>
-                    <input type="text" id="TransactionCurrencyCode" placeholder="EUR" maxlength="3" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition uppercase" required>
-                </div>
-
-                <div class="form-group md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Produit (ID)</label>
-                    <input type="number" id="ProductID" placeholder="ID du produit" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
+          <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              ></path>
+            </svg>
+            Détails de la Transaction
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Pays de transaction</label
+              >
+              <input
+                type="text"
+                id="TransactionCountry"
+                placeholder="Ex: France"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
             </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Montant (€)</label
+              >
+              <input
+                type="number"
+                id="TransactionAmount"
+                step="0.01"
+                placeholder="0.00"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Achat important</label
+              >
+              <select
+                id="LargePurchase"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+              >
+                <option value="0">❌ Non</option>
+                <option value="1">✅ Oui</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Code monnaie</label
+              >
+              <input
+                type="text"
+                id="TransactionCurrencyCode"
+                placeholder="EUR"
+                maxlength="3"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition uppercase"
+                required
+              />
+            </div>
+
+            <div class="form-group md:col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Produit (ID)</label
+              >
+              <input
+                type="number"
+                id="ProductID"
+                placeholder="ID du produit"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Section Compte -->
         <div class="mb-8">
-            <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
-                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                </svg>
-                Informations Compte
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Numéro de compte</label>
-                    <input type="number" id="AccountNo" placeholder="Numéro" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Date expiration carte</label>
-                    <input type="number" id="CardExpiryDate" placeholder="MMYY" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">CIF</label>
-                    <input type="number" id="CIF" placeholder="Identifiant" class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition" required>
-                </div>
+          <h2 class="text-xl font-semibold text-red-400 mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+              ></path>
+            </svg>
+            Informations Compte
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Numéro de compte</label
+              >
+              <input
+                type="number"
+                id="AccountNo"
+                placeholder="Numéro"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
             </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >Date expiration carte</label
+              >
+              <input
+                type="number"
+                id="CardExpiryDate"
+                placeholder="MMYY"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="block text-sm font-medium text-gray-300 mb-2"
+                >CIF</label
+              >
+              <input
+                type="number"
+                id="CIF"
+                placeholder="Identifiant"
+                class="w-full p-3 bg-gray-700/50 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition"
+                required
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Bouton d'analyse -->
-        <button id="submitBtn" type="submit" class="relative w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/50 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]">
-                <span id="btnText" class="flex items-center justify-center">
-                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Analyser la transaction
-                </span>
+        <button
+          id="submitBtn"
+          type="submit"
+          class="relative w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-red-500/50 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <span id="btnText" class="flex items-center justify-center">
+            <svg
+              class="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+            Analyser la transaction
+          </span>
         </button>
-    </form>
+      </form>
 
-    <!-- Carte de résultat -->
-    <div id="resultCard" class="hidden mt-8 bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-gray-700 animate-slide-up">
+      <!-- Carte de résultat -->
+      <div
+        id="resultCard"
+        class="hidden mt-8 bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-gray-700 animate-slide-up"
+      >
         <div class="text-center">
-            <div id="resultIcon" class="inline-block p-6 rounded-full mb-4"></div>
-            <h2 id="resultTitle" class="text-3xl font-bold mb-4"></h2>
-            <div id="resultDetails" class="space-y-3 text-lg">
-            </div>
-            <button onclick="document.getElementById('resultCard').classList.add('hidden')" class="mt-6 px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition">
-                Nouvelle analyse
+          <div id="resultIcon" class="inline-block p-6 rounded-full mb-4"></div>
+          <h2 id="resultTitle" class="text-3xl font-bold mb-4"></h2>
+          <div id="resultDetails" class="space-y-3 text-lg"></div>
+          <div class="flex justify-center space-x-4 mt-6">
+            <button
+              onclick="document.getElementById('resultCard').classList.add('hidden')"
+              class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition"
+            >
+              Nouvelle analyse
             </button>
+            <a
+              href="{{ url_for('history') }}"
+              class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition"
+            >
+              Voir l'historique
+            </a>
+          </div>
         </div>
+      </div>
     </div>
-</div>
 
-<style>
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slide-up {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
+    <style>
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
         animation: fade-in 0.6s ease-out;
-    }
-    .animate-slide-up {
+      }
+      .animate-slide-up {
         animation: slide-up 0.5s ease-out;
-    }
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
+      }
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
         -webkit-appearance: none;
         margin: 0;
-    }
-    input[type="number"] {
+      }
+      input[type="number"] {
         -moz-appearance: textfield;
-    }
-</style>
+      }
+    </style>
 
-<script>
-    const form = document.getElementById('fraudForm');
-    const resultCard = document.getElementById('resultCard');
-    const resultTitle = document.getElementById('resultTitle');
-    const resultDetails = document.getElementById('resultDetails');
-    const resultIcon = document.getElementById('resultIcon');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
+    <script>
+      const form = document.getElementById("fraudForm");
+      const resultCard = document.getElementById("resultCard");
+      const resultTitle = document.getElementById("resultTitle");
+      const resultDetails = document.getElementById("resultDetails");
+      const resultIcon = document.getElementById("resultIcon");
+      const submitBtn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
 
-    form.addEventListener('submit', async e => {
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
         submitBtn.disabled = true;
         btnText.innerHTML = `
@@ -201,82 +498,102 @@
         `;
 
         const fields = [
-            'Gender','Age','HouseTypeID','ContactAvaliabilityID','HomeCountry',
-            'AccountNo','CardExpiryDate','TransactionAmount','TransactionCountry',
-            'LargePurchase','ProductID','CIF','TransactionCurrencyCode'
+          "Gender",
+          "Age",
+          "HouseTypeID",
+          "ContactAvaliabilityID",
+          "HomeCountry",
+          "AccountNo",
+          "CardExpiryDate",
+          "TransactionAmount",
+          "TransactionCountry",
+          "LargePurchase",
+          "ProductID",
+          "CIF",
+          "TransactionCurrencyCode",
         ];
 
         const payload = {};
-        fields.forEach(f => payload[f] = document.getElementById(f).value);
+        fields.forEach((f) => (payload[f] = document.getElementById(f).value));
 
         try {
-            const res = await fetch('/api/predict', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
+          const res = await fetch("/api/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-            const result = await res.json();
+          const result = await res.json();
 
-            if (!res.ok || result.error) {
-                showError(result.error || "Erreur de prédiction !");
-            } else {
-                displayResult(result);
-            }
+          if (!res.ok || result.error) {
+            showError(result.error || "Erreur de prédiction !");
+          } else {
+            displayResult(result);
+          }
         } catch (err) {
-            showError("Erreur de connexion au serveur : " + err.message);
+          showError("Erreur de connexion : " + err.message);
         } finally {
-            submitBtn.disabled = false;
-            btnText.innerHTML = `
+          submitBtn.disabled = false;
+          btnText.innerHTML = `
                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
                 Analyser la transaction
             `;
         }
-    });
+      });
 
-    function displayResult(result) {
-        resultCard.classList.remove('hidden');
+      function displayResult(result) {
+        resultCard.classList.remove("hidden");
 
         if (result.fraud_prediction === 1) {
-            resultIcon.className = "inline-block p-6 rounded-full mb-4 bg-red-500/20";
-            resultIcon.innerHTML = `
+          resultIcon.className =
+            "inline-block p-6 rounded-full mb-4 bg-red-500/20";
+          resultIcon.innerHTML = `
                 <svg class="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             `;
-            resultTitle.className = "text-3xl font-bold mb-4 text-red-400";
-            resultTitle.textContent = "⚠️ " + result.status;
+          resultTitle.className = "text-3xl font-bold mb-4 text-red-400";
+          resultTitle.textContent = "⚠️ " + result.status;
         } else {
-            resultIcon.className = "inline-block p-6 rounded-full mb-4 bg-green-500/20";
-            resultIcon.innerHTML = `
+          resultIcon.className =
+            "inline-block p-6 rounded-full mb-4 bg-green-500/20";
+          resultIcon.innerHTML = `
                 <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             `;
-            resultTitle.className = "text-3xl font-bold mb-4 text-green-400";
-            resultTitle.textContent = "✅ " + result.status;
+          resultTitle.className = "text-3xl font-bold mb-4 text-green-400";
+          resultTitle.textContent = "✅ " + result.status;
         }
 
         resultDetails.innerHTML = `
             <div class="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
                 <span class="text-gray-300">Niveau de risque :</span>
-                <span class="font-bold ${result.fraud_prediction === 1 ? 'text-red-400' : 'text-green-400'}">${result.risk_level}</span>
+                <span class="font-bold ${
+                  result.fraud_prediction === 1
+                    ? "text-red-400"
+                    : "text-green-400"
+                }">${result.risk_level}</span>
             </div>
             <div class="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
                 <span class="text-gray-300">Confiance :</span>
                 <span class="font-bold">${result.confidence}</span>
             </div>
+            <div class="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
+                <span class="text-gray-300">ID Transaction :</span>
+                <span class="font-bold text-gray-300">#${result.id}</span>
+            </div>
         `;
 
-        // Scroll vers le résultat
-        resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+        resultCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
 
-    function showError(message) {
-        resultCard.classList.remove('hidden');
-        resultIcon.className = "inline-block p-6 rounded-full mb-4 bg-orange-500/20";
+      function showError(message) {
+        resultCard.classList.remove("hidden");
+        resultIcon.className =
+          "inline-block p-6 rounded-full mb-4 bg-orange-500/20";
         resultIcon.innerHTML = `
             <svg class="w-16 h-16 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -289,13 +606,14 @@
                 <p class="text-gray-300">${message}</p>
             </div>
         `;
-        resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+        resultCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
 
-    // Convertir automatiquement le code devise en majuscules
-    document.getElementById('TransactionCurrencyCode').addEventListener('input', function(e) {
-        e.target.value = e.target.value.toUpperCase();
-    });
-</script>
-</body>
+      document
+        .getElementById("TransactionCurrencyCode")
+        .addEventListener("input", function (e) {
+          e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+  </body>
 </html>

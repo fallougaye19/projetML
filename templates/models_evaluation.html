@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Évaluation des Modèles - Détection de Fraude</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* Améliorations responsive */
+      @media (max-width: 768px) {
+        .grid-cols-1.md\:grid-cols-3 > * {
+          grid-column: span 3 / span 3;
+        }
+
+        .text-3xl {
+          font-size: 1.5rem;
+        }
+
+        .p-6 {
+          padding: 1rem;
+        }
+      }
+
+      /* Amélioration des transitions */
+      .transition-all {
+        transition: all 0.3s ease;
+      }
+
+      /* Correction de l'affichage des graphiques sur mobile */
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen"
+  >
+    <!-- Navigation -->
+    <nav class="bg-gray-800/50 backdrop-blur-lg border-b border-gray-700">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center space-x-4">
+            <div class="p-2 bg-red-500/10 rounded-lg">
+              <svg
+                class="w-8 h-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                ></path>
+              </svg>
+            </div>
+            <span
+              class="text-xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent"
+            >
+              Fraud Detection
+            </span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <a
+              href="{{ url_for('dashboard') }}"
+              class="px-4 py-2 rounded-lg hover:bg-gray-700/50 transition"
+            >
+              Dashboard
+            </a>
+            <a
+              href="{{ url_for('predict_page') }}"
+              class="px-4 py-2 rounded-lg hover:bg-gray-700/50 transition"
+            >
+              Analyse
+            </a>
+            <a
+              href="{{ url_for('history') }}"
+              class="px-4 py-2 rounded-lg hover:bg-gray-700/50 transition"
+            >
+              Historique
+            </a>
+            <a
+              href="{{ url_for('models_evaluation') }}"
+              class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-semibold"
+            >
+              Modèles
+            </a>
+            <div
+              class="border-l border-gray-700 pl-4 flex items-center space-x-3"
+            >
+              <div class="text-right">
+                <p class="text-sm font-semibold">{{ current_user.username }}</p>
+                <p class="text-xs text-gray-400">{{ current_user.role }}</p>
+              </div>
+              <a
+                href="{{ url_for('logout') }}"
+                class="p-2 hover:bg-gray-700/50 rounded-lg transition"
+                title="Déconnexion"
+              >
+                <svg
+                  class="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  ></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Contenu principal -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Titre -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold mb-2">Évaluation des Modèles ML</h1>
+        <p class="text-gray-400">
+          Comparaison et analyse des performances des modèles de détection de
+          fraude
+        </p>
+      </div>
+
+      <!-- Loader -->
+      <div id="loader" class="text-center py-16">
+        <svg
+          class="animate-spin h-16 w-16 mx-auto text-red-400 mb-4"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        <p class="text-gray-400">Chargement des métriques des modèles...</p>
+      </div>
+
+      <!-- Contenu principal (caché par défaut) -->
+      <div id="mainContent" class="hidden">
+        <!-- Résumé des modèles -->
+        <div
+          class="mb-8 bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700"
+        >
+          <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2 text-red-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              ></path>
+            </svg>
+            Modèles Entraînés
+          </h2>
+          <div id="modelsSummary" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Les cartes de résumé seront insérées ici -->
+          </div>
+        </div>
+
+        <!-- Graphique comparatif -->
+        <div
+          class="mb-8 bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700"
+        >
+          <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2 text-red-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+              ></path>
+            </svg>
+            Comparaison des Métriques
+          </h2>
+          <div class="h-96">
+            <canvas id="metricsComparisonChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Matrices de confusion -->
+        <div class="mb-8">
+          <h2 class="text-2xl font-semibold mb-6 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2 text-red-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+              ></path>
+            </svg>
+            Matrices de Confusion
+          </h2>
+          <div
+            id="confusionMatrices"
+            class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          >
+            <!-- Les matrices seront insérées ici -->
+          </div>
+        </div>
+
+        <!-- Tableau comparatif détaillé -->
+        <div
+          class="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700"
+        >
+          <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <svg
+              class="w-6 h-6 mr-2 text-red-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+              ></path>
+            </svg>
+            Tableau Comparatif Détaillé
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="detailedTable">
+              <thead>
+                <tr class="border-b border-gray-700">
+                  <th class="text-left p-3 font-semibold">Modèle</th>
+                  <th class="text-center p-3 font-semibold">Accuracy</th>
+                  <th class="text-center p-3 font-semibold">Précision</th>
+                  <th class="text-center p-3 font-semibold">Rappel</th>
+                  <th class="text-center p-3 font-semibold">F1-Score</th>
+                  <th class="text-center p-3 font-semibold">VP</th>
+                  <th class="text-center p-3 font-semibold">FP</th>
+                  <th class="text-center p-3 font-semibold">FN</th>
+                  <th class="text-center p-3 font-semibold">VN</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <!-- Les lignes seront insérées ici -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Analyse et recommandations -->
+        <div
+          class="mt-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30"
+        >
+          <h2
+            class="text-xl font-semibold mb-4 flex items-center text-blue-400"
+          >
+            <svg
+              class="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            Analyse et Recommandations
+          </h2>
+          <div id="recommendations" class="space-y-4">
+            <!-- Les recommandations seront insérées ici -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let metricsChart;
+
+      // Données simulées (à remplacer par vos vraies données)
+      const modelsData = {
+        "Logistic Regression": {
+          accuracy: 0.8523,
+          precision: 0.8456,
+          recall: 0.8612,
+          f1_score: 0.8533,
+          confusion_matrix: [
+            [850, 150],
+            [139, 861],
+          ],
+          training_time: 0.45,
+        },
+        "Random Forest": {
+          accuracy: 0.9245,
+          precision: 0.9187,
+          recall: 0.9312,
+          f1_score: 0.9249,
+          confusion_matrix: [
+            [925, 75],
+            [69, 931],
+          ],
+          training_time: 2.34,
+        },
+        "Gradient Boosting": {
+          accuracy: 0.9156,
+          precision: 0.9098,
+          recall: 0.9223,
+          f1_score: 0.916,
+          confusion_matrix: [
+            [912, 88],
+            [78, 922],
+          ],
+          training_time: 3.12,
+        },
+        SVM: {
+          accuracy: 0.8834,
+          precision: 0.8767,
+          recall: 0.8909,
+          f1_score: 0.8837,
+          confusion_matrix: [
+            [878, 122],
+            [109, 891],
+          ],
+          training_time: 5.67,
+        },
+        "K-Nearest Neighbors": {
+          accuracy: 0.8645,
+          precision: 0.8578,
+          recall: 0.8723,
+          f1_score: 0.865,
+          confusion_matrix: [
+            [860, 140],
+            [128, 872],
+          ],
+          training_time: 0.89,
+        },
+      };
+
+      // Remplacer la fonction loadModelsEvaluation
+      function loadModelsEvaluation() {
+        const loader = document.getElementById("loader");
+        const mainContent = document.getElementById("mainContent");
+
+        // Simuler un chargement (à remplacer par un vrai appel API)
+        setTimeout(() => {
+          loader.classList.add("hidden");
+          mainContent.classList.remove("hidden");
+
+          // Générer tout le contenu
+          generateModelsSummary();
+          generateComparisonChart();
+          generateConfusionMatrices();
+          generateDetailedTable();
+          generateRecommendations();
+        }, 1500);
+      }
+
+      // Gestion des erreurs
+      window.addEventListener("load", () => {
+        try {
+          loadModelsEvaluation();
+        } catch (error) {
+          console.error("Erreur lors du chargement:", error);
+          document.getElementById("loader").innerHTML = `
+            <div class="text-red-400">
+                <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p>Erreur lors du chargement des données</p>
+                <button onclick="loadModelsEvaluation()" class="mt-4 px-4 py-2 bg-red-600 rounded-lg">Réessayer</button>
+            </div>
+        `;
+        }
+      });
+
+      function generateModelsSummary() {
+        const container = document.getElementById("modelsSummary");
+        let html = "";
+
+        Object.entries(modelsData).forEach(([name, data]) => {
+          const bestMetric = Math.max(
+            data.accuracy,
+            data.precision,
+            data.recall
+          );
+          const isBest =
+            bestMetric ===
+            Math.max(
+              ...Object.values(modelsData).map((d) =>
+                Math.max(d.accuracy, d.precision, d.recall)
+              )
+            );
+
+          html += `
+                    <div class="bg-gray-700/30 rounded-lg p-4 ${
+                      isBest ? "border-2 border-green-500" : ""
+                    }">
+                        ${
+                          isBest
+                            ? '<div class="text-xs text-green-400 font-semibold mb-1">🏆 MEILLEUR</div>'
+                            : ""
+                        }
+                        <h3 class="font-semibold text-sm mb-2">${name}</h3>
+                        <div class="space-y-1 text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Accuracy:</span>
+                                <span class="font-semibold">${(
+                                  data.accuracy * 100
+                                ).toFixed(2)}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Rappel:</span>
+                                <span class="font-semibold">${(
+                                  data.recall * 100
+                                ).toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      function generateComparisonChart() {
+        const ctx = document
+          .getElementById("metricsComparisonChart")
+          .getContext("2d");
+
+        const labels = Object.keys(modelsData);
+        const accuracyData = labels.map(
+          (name) => modelsData[name].accuracy * 100
+        );
+        const precisionData = labels.map(
+          (name) => modelsData[name].precision * 100
+        );
+        const recallData = labels.map((name) => modelsData[name].recall * 100);
+        const f1Data = labels.map((name) => modelsData[name].f1_score * 100);
+
+        if (metricsChart) metricsChart.destroy();
+
+        metricsChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Accuracy",
+                data: accuracyData,
+                backgroundColor: "rgba(96, 165, 250, 0.7)",
+                borderColor: "rgb(96, 165, 250)",
+                borderWidth: 2,
+              },
+              {
+                label: "Précision",
+                data: precisionData,
+                backgroundColor: "rgba(74, 222, 128, 0.7)",
+                borderColor: "rgb(74, 222, 128)",
+                borderWidth: 2,
+              },
+              {
+                label: "Rappel",
+                data: recallData,
+                backgroundColor: "rgba(251, 191, 36, 0.7)",
+                borderColor: "rgb(251, 191, 36)",
+                borderWidth: 2,
+              },
+              {
+                label: "F1-Score",
+                data: f1Data,
+                backgroundColor: "rgba(248, 113, 113, 0.7)",
+                borderColor: "rgb(248, 113, 113)",
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  color: "#9ca3af",
+                  callback: function (value) {
+                    return value + "%";
+                  },
+                },
+                grid: { color: "rgba(75, 85, 99, 0.3)" },
+              },
+              x: {
+                ticks: { color: "#9ca3af" },
+                grid: { color: "rgba(75, 85, 99, 0.3)" },
+              },
+            },
+            plugins: {
+              legend: {
+                labels: { color: "#9ca3af" },
+                position: "top",
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.dataset.label +
+                      ": " +
+                      context.parsed.y.toFixed(2) +
+                      "%"
+                    );
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function generateConfusionMatrices() {
+        const container = document.getElementById("confusionMatrices");
+        let html = "";
+
+        Object.entries(modelsData).forEach(([name, data]) => {
+          const cm = data.confusion_matrix;
+          const tn = cm[0][0],
+            fp = cm[0][1],
+            fn = cm[1][0],
+            tp = cm[1][1];
+          const total = tn + fp + fn + tp;
+
+          html += `
+                    <div class="bg-gray-700/30 rounded-lg p-6">
+                        <h3 class="font-semibold text-lg mb-4 text-center">${name}</h3>
+                        
+                        <!-- Matrice -->
+                        <div class="grid grid-cols-2 gap-2 mb-4">
+                            <div class="bg-green-500/20 border-2 border-green-500/50 rounded-lg p-4 text-center">
+                                <div class="text-sm text-gray-400 mb-1">Vrais Négatifs (VN)</div>
+                                <div class="text-3xl font-bold text-green-400">${tn}</div>
+                                <div class="text-xs text-gray-500 mt-1">${(
+                                  (tn / total) *
+                                  100
+                                ).toFixed(1)}%</div>
+                            </div>
+                            <div class="bg-orange-500/20 border-2 border-orange-500/50 rounded-lg p-4 text-center">
+                                <div class="text-sm text-gray-400 mb-1">Faux Positifs (FP)</div>
+                                <div class="text-3xl font-bold text-orange-400">${fp}</div>
+                                <div class="text-xs text-gray-500 mt-1">${(
+                                  (fp / total) *
+                                  100
+                                ).toFixed(1)}%</div>
+                            </div>
+                            <div class="bg-red-500/20 border-2 border-red-500/50 rounded-lg p-4 text-center">
+                                <div class="text-sm text-gray-400 mb-1">Faux Négatifs (FN)</div>
+                                <div class="text-3xl font-bold text-red-400">${fn}</div>
+                                <div class="text-xs text-gray-500 mt-1">${(
+                                  (fn / total) *
+                                  100
+                                ).toFixed(1)}%</div>
+                            </div>
+                            <div class="bg-blue-500/20 border-2 border-blue-500/50 rounded-lg p-4 text-center">
+                                <div class="text-sm text-gray-400 mb-1">Vrais Positifs (VP)</div>
+                                <div class="text-3xl font-bold text-blue-400">${tp}</div>
+                                <div class="text-xs text-gray-500 mt-1">${(
+                                  (tp / total) *
+                                  100
+                                ).toFixed(1)}%</div>
+                            </div>
+                        </div>
+
+                        <!-- Analyse -->
+                        <div class="bg-gray-800/50 rounded-lg p-3 text-sm space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Fraudes détectées:</span>
+                                <span class="font-semibold text-blue-400">${tp} / ${
+            tp + fn
+          }</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Fraudes manquées:</span>
+                                <span class="font-semibold text-red-400">${fn}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Fausses alertes:</span>
+                                <span class="font-semibold text-orange-400">${fp}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      function generateDetailedTable() {
+        const tbody = document.getElementById("tableBody");
+        let html = "";
+
+        // Trier par F1-Score
+        const sortedModels = Object.entries(modelsData).sort(
+          (a, b) => b[1].f1_score - a[1].f1_score
+        );
+
+        sortedModels.forEach(([name, data], index) => {
+          const cm = data.confusion_matrix;
+          const tn = cm[0][0],
+            fp = cm[0][1],
+            fn = cm[1][0],
+            tp = cm[1][1];
+          const isBest = index === 0;
+
+          html += `
+                    <tr class="border-b border-gray-700 hover:bg-gray-700/30 ${
+                      isBest ? "bg-green-500/10" : ""
+                    }">
+                        <td class="p-3">
+                            <div class="flex items-center">
+                                ${isBest ? '<span class="mr-2">🏆</span>' : ""}
+                                <span class="font-semibold">${name}</span>
+                            </div>
+                        </td>
+                        <td class="text-center p-3">
+                            <span class="px-3 py-1 rounded-full ${getScoreClass(
+                              data.accuracy
+                            )}">${(data.accuracy * 100).toFixed(2)}%</span>
+                        </td>
+                        <td class="text-center p-3">
+                            <span class="px-3 py-1 rounded-full ${getScoreClass(
+                              data.precision
+                            )}">${(data.precision * 100).toFixed(2)}%</span>
+                        </td>
+                        <td class="text-center p-3">
+                            <span class="px-3 py-1 rounded-full ${getScoreClass(
+                              data.recall
+                            )}">${(data.recall * 100).toFixed(2)}%</span>
+                        </td>
+                        <td class="text-center p-3">
+                            <span class="px-3 py-1 rounded-full ${getScoreClass(
+                              data.f1_score
+                            )}">${(data.f1_score * 100).toFixed(2)}%</span>
+                        </td>
+                        <td class="text-center p-3 text-blue-400 font-semibold">${tp}</td>
+                        <td class="text-center p-3 text-orange-400 font-semibold">${fp}</td>
+                        <td class="text-center p-3 text-red-400 font-semibold">${fn}</td>
+                        <td class="text-center p-3 text-green-400 font-semibold">${tn}</td>
+                    </tr>
+                `;
+        });
+
+        tbody.innerHTML = html;
+      }
+
+      function getScoreClass(score) {
+        if (score >= 0.9) return "bg-green-500/20 text-green-400";
+        if (score >= 0.8) return "bg-blue-500/20 text-blue-400";
+        if (score >= 0.7) return "bg-yellow-500/20 text-yellow-400";
+        return "bg-red-500/20 text-red-400";
+      }
+
+      function generateRecommendations() {
+        const container = document.getElementById("recommendations");
+
+        // Trouver le meilleur modèle
+        const bestModel = Object.entries(modelsData).reduce((best, current) =>
+          current[1].f1_score > best[1].f1_score ? current : best
+        );
+
+        const recommendations = [
+          {
+            icon: "🏆",
+            title: "Meilleur modèle global",
+            description: `<strong>${
+              bestModel[0]
+            }</strong> présente les meilleures performances avec un F1-Score de ${(
+              bestModel[1].f1_score * 100
+            ).toFixed(2)}% et un rappel de ${(
+              bestModel[1].recall * 100
+            ).toFixed(2)}%.`,
+          },
+          {
+            icon: "🎯",
+            title: "Importance du Rappel",
+            description:
+              "Pour la détection de fraude, le <strong>Rappel</strong> est crucial car il mesure la capacité à détecter toutes les fraudes. Un rappel élevé minimise les fraudes non détectées.",
+          },
+          {
+            icon: "⚖️",
+            title: "Équilibre Précision/Rappel",
+            description:
+              "Le <strong>F1-Score</strong> offre un bon équilibre. Un F1-Score élevé indique que le modèle détecte bien les fraudes tout en limitant les fausses alertes.",
+          },
+          {
+            icon: "🚨",
+            title: "Faux Négatifs (FN)",
+            description: `Les Faux Négatifs représentent des fraudes non détectées. Le modèle avec le moins de FN est <strong>${
+              Object.entries(modelsData).reduce((best, current) =>
+                current[1].confusion_matrix[1][0] <
+                best[1].confusion_matrix[1][0]
+                  ? current
+                  : best
+              )[0]
+            }</strong>.`,
+          },
+          {
+            icon: "💡",
+            title: "Recommandation finale",
+            description: `Pour un système de production, nous recommandons <strong>${bestModel[0]}</strong> avec un monitoring continu des performances et un seuil de décision ajustable selon les besoins métier.`,
+          },
+        ];
+
+        let html = "";
+        recommendations.forEach((rec) => {
+          html += `
+                    <div class="bg-gray-800/50 rounded-lg p-4 flex items-start space-x-4">
+                        <div class="text-3xl">${rec.icon}</div>
+                        <div>
+                            <h3 class="font-semibold text-white mb-1">${rec.title}</h3>
+                            <p class="text-sm text-gray-300">${rec.description}</p>
+                        </div>
+                    </div>
+                `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      // Charger les données au chargement de la page
+      window.addEventListener("load", () => {
+        // Simuler un chargement asynchrone
+        setTimeout(loadModelsEvaluation, 1500);
+      });
+
+      // Fonction pour exporter les résultats
+      function exportResults() {
+        const dataStr = JSON.stringify(modelsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "modeles-evaluation.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // Fonction pour rafraîchir les données
+      function refreshData() {
+        document.getElementById("loader").classList.remove("hidden");
+        document.getElementById("mainContent").classList.add("hidden");
+
+        setTimeout(() => {
+          // Ici vous pourriez faire un appel API pour récupérer de nouvelles données
+          loadModelsEvaluation();
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>
