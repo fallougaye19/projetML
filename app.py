@@ -441,30 +441,5 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
-
-# ==============================
-# 🚀 INITIALISATION
-# ==============================
-
-@app.before_request
-def create_tables():
-    if not hasattr(app, '_tables_created'):
-        db.create_all()
-        
-        # Créer un admin par défaut si aucun utilisateur n'existe
-        if User.query.count() == 0:
-            admin = User(
-                username='admin',
-                email='admin@fraud-detection.com',
-                role='admin'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✅ Utilisateur admin créé (admin/admin123)")
-        
-        app._tables_created = True
-
-
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
